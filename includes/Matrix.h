@@ -1,6 +1,14 @@
+/*
+* Interface file for the Ray Tracer Matrices.
+*
+*
+* This file contains the definitions for the Matrix class,
+* which are used to transform all the objects within a 3D scene.
+*
+*/
+
 #ifndef MATRIX_H
 #define MATRIX_H
-
 
 #include "precision.h"
 #include "Tuple.h"
@@ -8,37 +16,50 @@
 #include "Vector.h"
 #include <math.h>
 
-
-
 namespace rtc {
+
+	/*
+	* The Ray Tracer implements Matrix Transformations to manipulate
+	* points and vectors, and scale, translate, rotate, and sheare 
+	* objects within a 3D scene.
+	*/
+
 	class Matrix {
 
 	public:
+
+		// Matrix dimension parameters.
+		int m_rows{ 0 };
+		int m_columns{ 0 };
+		int size{ 0 };
+
+		// A matrix is implemented as a two dimensional array of real numbers.
+		real** matrix;
 		void create_matrix(int rows, int columns) {
 			this->matrix = new real * [rows]();
 			for (int i = 0; i < rows; ++i)
 				matrix[i] = new real[columns]();
 		}
 
-	public:
-		int m_rows{ 0 };
-		int m_columns{ 0 };
-		int size{ 0 };
-		real** matrix;
-
+		// Default constructor is an identity matrix of size 4.
 		Matrix() { identity(4); }
 
+		// Construct an square matrix with specified size.
 		Matrix(int size) : m_rows{ size }, m_columns{ size }, size{ size } {
 			create_matrix(m_rows, m_columns);
 		}
+
+		// Construct matrix with specified dimensions.
 		Matrix(int rows, int columns) : m_rows{ rows }, m_columns{ columns }{
 			create_matrix(m_rows, m_columns);
 		}
 
+		// Returns the value stored at position 'xy' in the matrix.
 		real valueAt(int x, int y) {
 			return matrix[x][y];
 		}
 
+		// Evaluates if two matrices are identical.
 		static bool identical_matrix(const Matrix& a, const Matrix& b) {
 			if (a.m_rows != b.m_rows || a.m_columns != b.m_columns)
 				return false;
@@ -52,6 +73,7 @@ namespace rtc {
 			return true;
 		}
 
+		// Creates an identity matrix of the specified size.
 		static Matrix identity(int size) {
 			Matrix m{ size };
 			for (int i = 0; i < m.size; i++)
@@ -60,7 +82,8 @@ namespace rtc {
 			return m;
 		}
 
-		static Matrix multiplyMatrices(const Matrix& a, const Matrix& b) {				// Multiply AxB
+		// Multiplies two matrices - AxB - and returns the resulting matrix.
+		static Matrix multiplyMatrices(const Matrix& a, const Matrix& b) {				
 			Matrix c{ a.size };
 			real x = 0;
 			for (int i = 0; i < a.m_rows; i++) {
@@ -74,6 +97,8 @@ namespace rtc {
 			}
 			return c;
 		}
+
+		// Multiplies a matrix by a tuple (point or vector).
 		template <typename T>
 		static T multiplyByTuple(Matrix a, T b) {
 			T t;
@@ -84,12 +109,14 @@ namespace rtc {
 			return t;
 		}
 
+		// Multiplies a matrix by an identity matrix, and returns the resulting matrix.
 		static Matrix multiplyIdentity(const Matrix& a) {
 			Matrix m{ a.size };
 			m = identity(m.size);
 			return multiplyMatrices(a, m);
 		}
 
+		// Returns the transpose of matrix A.
 		static Matrix transpose(Matrix a) {
 			Matrix t(a.size);
 			for (int i = 0; i < a.size; i++)
@@ -98,6 +125,7 @@ namespace rtc {
 			return t;
 		}
 
+		// Returns the submatrix XY of matrix M.
 		static Matrix submatrix(const Matrix& m, int x, int y) {
 			Matrix sm{ m.size - 1 };
 			int row = 0;
@@ -113,6 +141,7 @@ namespace rtc {
 			return sm;
 		}
 
+		// Returns the determinant of matrix M.
 		static real determinant(const Matrix& m) {
 			real deter{ 0 };
 			real minor{ 0 };
@@ -135,6 +164,7 @@ namespace rtc {
 			return deter;
 		}
 
+		// Returns the Cofactor Matrix of matrix M.
 		static Matrix cofactorMatrix(const Matrix& m) {
 			real minor{ 0 };
 			Matrix matrix{ m.size };
@@ -159,6 +189,7 @@ namespace rtc {
 			return cm;
 		}
 
+		// Returns the Inverse matrix of matrix A.
 		static Matrix inverse(const Matrix& a) {
 			real d{ determinant(a) };
 			Matrix cofactor{ cofactorMatrix(a) };
@@ -172,6 +203,7 @@ namespace rtc {
 			return inverse;
 		}
 
+		// Returns the Translation matrix to point P.
 		static Matrix translation_matrix_p(const Point& p) {
 			Matrix t{ identity(4) };
 			t.matrix[0][3] = p.m_x;
@@ -181,6 +213,7 @@ namespace rtc {
 			return t;
 		}
 
+		// Returns the Translation matrix to vector V.
 		static Matrix translation_matrix_v(const Vector& v) {
 			Matrix t{ 4 };
 			t = identity(4);
@@ -191,6 +224,7 @@ namespace rtc {
 			return t;
 		}
 
+		// Returns an identity matrix scaled by point P xyz values.
 		static Matrix scaling_matrix_p(const Point& p) {
 			Matrix s{ 4 };
 			s = identity(4);
@@ -201,6 +235,7 @@ namespace rtc {
 			return s;
 		}
 
+		// Returns an identity matrix scaled by vector V xyz values.
 		static Matrix scaling_matrix_v(const Vector& v) {
 			Matrix s{ 4 };
 			s = identity(4);
@@ -211,6 +246,7 @@ namespace rtc {
 			return s;
 		}
 
+		// Returns an identity matrix rotated around the X axis by D degrees.
 		static Matrix rotation_matrix_x(const real& d) {
 			Matrix r{ identity(4) };
 			r.matrix[1][1] = cos(d);
@@ -220,6 +256,7 @@ namespace rtc {
 			return r;
 		}
 
+		// Returns an identity matrix rotated around the Y axis by D degrees.
 		static Matrix rotation_matrix_y(const real& d) {
 			Matrix r{ identity(4) };
 			r.matrix[0][0] = cos(d);
@@ -229,6 +266,7 @@ namespace rtc {
 			return r;
 		}
 
+		// Returns an identity matrix rotated around the Z axis by D degrees.
 		static Matrix rotation_matrix_z(const real& d) {
 			Matrix r{ 4 };
 			r = identity(4);
@@ -239,6 +277,7 @@ namespace rtc {
 			return r;
 		}
 
+		// Returns an identity matrix sheared according to the specified values.
 		static Matrix shearing_matrix(const real& xy, const real& xz, const real& yx,
 			const real& yz, const real& zx, const real& zy)
 		{
@@ -253,6 +292,7 @@ namespace rtc {
 			return s;
 		}
 
+		// Returns a transformation matrix that orients the 3D scene relative to the viewer.
 		static Matrix view_transform(Point& from, Point& to, Vector& up) {
 			Vector forward = Point::subPoints(to, from);
 			Vector upn = Vector::normalize(up);
