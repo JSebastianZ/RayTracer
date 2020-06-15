@@ -1,6 +1,12 @@
 #include "Transform.h"
 
 namespace rtc {
+
+/*
+ * --------------------------------------------------------------------------
+ * FUNCTIONS DECLARED IN HEADER:
+ * --------------------------------------------------------------------------
+ */
 	
 		static Point translate_point(const Point& p, const Point& b) {
 			Matrix m = Matrix::translation_matrix_p(p);
