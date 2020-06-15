@@ -1,3 +1,12 @@
+/*
+* Interface file for code that changes the Ray Tracer precision.
+*
+*
+* This file contains the definitions for Ray Tracer project precision,
+* in order to change it easily from a single header file.
+*
+*/
+
 #ifndef RTC_PRECISION_H
 #define RTC_PRECISION_H
 #define PI 3.14159265
