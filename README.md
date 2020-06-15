@@ -4,6 +4,9 @@ This Ray Tracer is a C++ implementation of the Whitted ray tracing algorithm*.
 The goal of this project is to provide a 3D API that fully supports a recursive ray tracer as proposed by Turner Whitted in 1979.
 
 To accomplish the goal, a 3D API is designed with an object oriented approach. It implements classes that support Vector and Matrix algebra.
+<p align="center">
+  <img width="175" height="175" src="https://user-images.githubusercontent.com/66903979/84622090-2d756b80-af17-11ea-8902-46ee321fa7df.jpg">
+</p>
 
 ## How does it work?
 The color of each pixel of the final image is calculated as follows:
