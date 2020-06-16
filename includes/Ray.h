@@ -1,3 +1,12 @@
+/*
+* Interface file for the Ray Tracer rays.
+*
+*
+* This file contains the definitions for the ray class,
+* which create rays and find intersections with objects.
+*
+*/
+
 #ifndef RAY_H
 #define RAY_H
 
@@ -17,48 +26,86 @@
 #include "Camera.h"
 
 namespace rtc {
+
+	/*
+	* The Ray Tracer cast rays (lines) and computes hit points
+	* with every object within the 3D scene. To determine the
+	* color of the hit point, the color_at function identifies
+	* the closest object intersect by a ray, and evaluates its
+	* material, light sources, and other attributes.
+	*/
+
 	class Ray {
+
 	public:
+
+		// Every ray has an origin and direction
 		Point m_origin;
 		Vector m_direction;
 
-		bool m_inside = false;															// Determine if the eye is inside the sphere
+		// m_inside is used to identify when a ray or eye vector
+		// originates inside an object's volume.
+		bool m_inside = false;															
+		
+		// Point in the 3D world where a ray intersects an object.
 		Point m_choke;
-		Vector m_eye;
-		Vector m_normal;
+
+		// m_hit is the magnitude of m_choke;
 		real m_hit;
-		std::unordered_map<real, Object> intersections;									// map intersectioin point with objects
+
+		// Collection of points where a ray intersects an object.
 		std::vector<real> accummulate_ix;
 
-	public:
+		// Data structure that maps intersection points with intersected objects.
+		// Used to keep track of the object that is intersected at an specific point.
+		std::unordered_map<real, Object> intersections;
 
-		Ray() : m_origin{ Point(0,0,0) }, m_direction{ Vector(0,0,0) }{}		// The position Vector must be NORMALIZED
+		// Vector pointing from the ray intersection point of 
+		// an object to the origin of the ray.
+		Vector m_eye;
 
+		// Vector perpendicular to the surface of an object.
+		Vector m_normal;
+
+		// Default constructor of a ray at the origin.
+		Ray() : m_origin{ Point(0,0,0) }, m_direction{ Vector(0,0,0) }{}	
+
+		// Construct ray at specified origin and position.
+		// Ray direction must be normalized.
 		Ray(Point origin, Vector position) : m_origin{ origin }, m_direction{ position }{}
 
+		// Destructor.
 		~Ray() {}
 
+		// Given a ray, and a hit value, returns the 
+		// 3D coordinates of the hit point.
 		static Point position(const Ray& r, const real& d) {
 			Vector v(Vector::scalarMultiplication(r.m_direction, d));
 			Point p(Point::addVector2Point(r.m_origin, v));
 			return p;
 		}
 
+		// Vector that represents the "eye" looking at the 3D scene.
+		// "Light" received through this vector is composed of
+		// the diffuse and specular reflection of the incident light.
 		static Vector eye_vector(const Ray& r) {
 			return Vector::negate(r.m_direction);
 		}
 
+		// Computation of normal vector to the surface at hit point to be shaded.
 		static Vector normal_at_hit(const Matrix& transform, const Point& p) {
 			Matrix m_inverse_trans(Matrix::inverse(transform));
-
-			Point object_point(rtc::Matrix::multiplyByTuple(m_inverse_trans, p));		// Calculo del vector Normal al hit point choke
-			Vector object_normal(Point::subPoints(object_point, rtc::Point(0, 0, 0)));	// punto podria ser origen de la esfera?
+			Point object_point(rtc::Matrix::multiplyByTuple(m_inverse_trans, p));		
+			Vector object_normal(Point::subPoints(object_point, rtc::Point(0, 0, 0)));	
 			Vector world_normal(Matrix::multiplyByTuple(rtc::Matrix::transpose(m_inverse_trans), object_normal));
 			world_normal.m_w = 0;
 			return  (Vector::normalize(world_normal));
 		}
 
-		void sphere_intersections( Ray& ray, const Sphere& s) {	// Estas intersecciones no son coordenadas 3D! son puntos de la ecuacion implicita!
+		// Computes Ray-Sphere intersections by calculating the discriminant 
+		// and two Sphere quadratic function roots (t0/t1). The two roots are 
+		// mapped to a sphere, and stored in the accummulate_ix data structure. 
+		void sphere_intersections( Ray& ray, const Sphere& s) {	
 			Point origin = ray.m_origin;
 			Vector direction = ray.m_direction;
 			Ray ray2 = Ray(origin,direction);			
@@ -72,40 +119,31 @@ namespace rtc {
 			real discriminant = (pow(b, 2) - (4.0 * a * c));
 			if (discriminant > 0) {
 				t0 = ((-1 * b) - sqrt(discriminant)) / (2 * a);
-				r.accummulate_ix.push_back(t0);
 				ray.accummulate_ix.push_back(t0);
-
-				r.intersections.insert({ t0, s});
 				ray.intersections.insert({ t0, s });
 				t1 = ((-1 * b) + sqrt(discriminant)) / (2 * a);
-				r.accummulate_ix.push_back(t1);
 				ray.accummulate_ix.push_back(t1);
-
-				r.intersections.insert({ t1,s });
 				ray.intersections.insert({ t1,s });
 			}
 			else if ((approxEqual(discriminant, 0.0, 1e-8)) || discriminant == 0) {
 				t0 = (-1 * b) / (2 * a);
-				r.accummulate_ix.push_back(t0);
 				ray.accummulate_ix.push_back(t0);
-
-				r.intersections.insert({ t0, s });
 				ray.intersections.insert({ t0, s });
 				t1 = (b) / (2 * a);
-				r.accummulate_ix.push_back(t1);
 				ray.accummulate_ix.push_back(t1);
-
-				r.intersections.insert({ t1,s });
 				ray.intersections.insert({ t1,s });
 			}
-			else { r.accummulate_ix.push_back(-999999);
-				ray.accummulate_ix.push_back(-999999);
+			else { r.accummulate_ix.push_back(INFINITE);	// If the discriminant is negative, the ray misses,
+				ray.accummulate_ix.push_back(INFINITE);		// no intersections exist (hit point at infinity).
 			}
 		}
 
-		real hit_location(std::vector<real>& i) {	// Hit location es punto t de la ecuacion implicita, no coordenadas/punto 3D!
-			real minimum{ 9999 };					// El hecho de que sea negativo no quiere decir nada, solo que 
-			for (int q = 0; q < i.size(); q++) {    // el valor de t es negativo en la interseccion de esfera
+		// Returns the location where a ray hits an object.
+		// Visible hit points must be the lowest positive real number
+		// from all intersection points of a ray (accumulate_ix).
+		real hit_location(std::vector<real>& i) {	
+			real minimum{ HIGH_NUMBER };					 // Initialize "minimum" to a high value for comparison purposes.
+			for (int q = 0; q < i.size(); q++) {   
 				if (i[q] < minimum && i[q] >= 0) {
 					minimum = i[q];
 				}
@@ -116,6 +154,10 @@ namespace rtc {
 			else return -1;
 		}
 
+		// Apply the inverse of the transformation matrix
+		// of an Object to a Ray. Returns a new ray with
+		// transformed origin and direction. This is used 
+		// to render transformed objects.
 		static Ray transform(const Ray& ray, const Matrix& transmatrix) {
 			Ray r;
 			r.m_origin = Matrix::multiplyByTuple(transmatrix, ray.m_origin);
@@ -124,54 +166,43 @@ namespace rtc {
 			return r;
 		}
 
+		// Ray Tracer implements the reflection model proposed
+		// by Bui Tuong Phong. It defines three types of reflection.
+		// Ambient: lightning reflected from other objects in the scene.
+		// Diffuse: light reflected from a matte surface.
+		// Specular: reflection of light source on a curved surface.
+		// All are represented as a Color object with range between 0~1.
 		static Color lighting(Material& m, Light& light, Point& p_p, Vector& p_eye, Vector& p_normal) {
-			Point p(p_p.m_x, p_p.m_y, p_p.m_z);
-			Vector eye(p_eye.m_x, p_eye.m_y, p_eye.m_z);
-			Vector normal(p_normal.m_x, p_normal.m_y, p_normal.m_z);
-
-			Color diffuse(0, 0, 0);															// Componente reflexion diffuse
-			Color specular(0, 0, 0);														// Componente de reflexion especular
-			Color effective_color(Color::multColors(m.m_color, light.m_intensity)); 			// Combinacion del color de la superficie del objeto y el color de la fuente de luz
-			Vector lightv(Vector::normalize(Point::subPoints(light.m_source, p))); 			// Vector LightV que va desde el HIT hacia la fuente de luz
-			Color ambient_contribution(Color::scalarMultiplication(effective_color, m.m_ambient));			// Componente de reflexion de ambiente, como multiplicacion de color efectivo y propiedad ambiental del material
-
-			real cosine_light_normal(Vector::dotProduct(lightv, static_cast<Vector>(normal)));			// Coseno del angulo entre vector de luz y vector normal. 
-			if (cosine_light_normal < 0) {													// Si es coseno de lightv y normal es < 0 la luz esta del otro lado de la superficie
-				diffuse.m_r = 0;
-				diffuse.m_g = 0;
-				diffuse.m_b = 0;
-				specular.m_r = 0;
-				specular.m_g = 0;
-				specular.m_b = 0;
+			Color diffuse(0, 0, 0);																// Diffuse reflection component.
+			Color specular(0, 0, 0);															// Specular reflection component.
+			Color effective_color(Color::multColors(m.m_color, light.m_intensity)); 			// Combine object surface and light source colors.
+			Vector lightv(Vector::normalize(Point::subPoints(light.m_source, p_p))); 			// Vector represents direction of light source.
+			Color ambient_contribution(Color::scalarMultiplication(effective_color, m.m_ambient));			// Compute ambient contribution.
+			real cosine_light_normal(Vector::dotProduct(lightv, static_cast<Vector>(p_normal)));			// Cosine of angle between light vector and object surface normal. 
+			if (cosine_light_normal < 0) {														// If negative, the light is "in the other side" of the surface.
+				diffuse = Color(0, 0, 0);
+				specular = Color(0, 0, 0);
 			}
-			else {
-				Color d(Color::scalarMultiplication(effective_color, (m.m_diffuse * cosine_light_normal)));				// contribucion de diffusion
-				diffuse.m_r = d.m_r;
-				diffuse.m_g = d.m_g;
-				diffuse.m_b = d.m_b;
-
-				Vector lightv_n(Vector::negate(lightv)); 									// reflection vector
-				Vector reflectv(Vector::reflected(lightv_n, normal));
-
-				real reflect_dot_eye(Vector::dotProduct(reflectv, eye));  					// Coseno del angulo entre el vector reflejado y el ojo.
-
-				if ((reflect_dot_eye < 0) || (approxEqual(reflect_dot_eye, 0.0000, EPSILON))) {				// Si es < 0 significa que la luz se refleja alejandose del ojo?
-					specular.m_r = 0;
-					specular.m_g = 0;
-					specular.m_b = 0;
+			else {																				// If light and normal are in the same side...
+				Color d(Color::scalarMultiplication(effective_color, (m.m_diffuse * cosine_light_normal)));	// Compute diffusion contribution.		
+				diffuse = Color(d.m_r, d.m_g, d.m_b);
+				Vector lightv_n(Vector::negate(lightv)); 										// Compute the reflection of the light vector towards
+				Vector reflectv(Vector::reflected(lightv_n, p_normal));							// the viewer ("eye" vector).
+				real reflect_dot_eye(Vector::dotProduct(reflectv, p_eye));  					
+				if ((reflect_dot_eye < 0) || (approxEqual(reflect_dot_eye, 0.0000, EPSILON))) {				// If negative, there is no specular reflection contribution.
+					specular = Color(0, 0, 0);
 				}
 				else {
-					real factor(pow(reflect_dot_eye, m.m_shininess));						// calculo de la contribucion specular
+					real factor(pow(reflect_dot_eye, m.m_shininess));										// If positive compute the specular contribution.
 					Color s(Color::scalarMultiplication(light.m_intensity, (m.m_specular * factor)));
-					specular.m_r = s.m_r;
-					specular.m_g = s.m_g;
-					specular.m_b = s.m_b;
+					specular = Color(s.m_r, s.m_g, s.m_b);
 				}
 			}
-			Color kodak(Color::addColors(ambient_contribution, (Color::addColors(diffuse, specular))));
+			Color kodak(Color::addColors(ambient_contribution, (Color::addColors(diffuse, specular))));		// Add and return all reflection contributions.
 			return kodak;
 		}
 
+		// Returns sorted collection of intersections. 
 		std::vector<real> intersect_world(const World& w, Ray& r) {
 			for (int i = 0; i < w.m_objects.size(); ++i) {
 				r.sphere_intersections(r, w.m_objects[i]);
@@ -180,57 +211,55 @@ namespace rtc {
 			return r.accummulate_ix;
 		}
 
+		// Prepares data structures and information about intersections.
 		void prepare_computations(const real& p_hit, Ray& r, World& w) {
-			// real p_hit = 0;										// Usa hit solamente si el test te lo pide
-			m_hit = r.hit_location(r.accummulate_ix);			// Este es el hit + que el current ray toca(minimum positive)
-			if (m_hit < 0 || m_hit == 9999) {
-
+			// p_hit = 0;										// set p_hit to 0 for test purposes.
+			m_hit = r.hit_location(r.accummulate_ix);			// stores hit location, return if there is none. 
+			if (m_hit < 0 || m_hit == HIGH_NUMBER) {
 				return;
 			}   
-			std::unordered_map<real, Object>::const_iterator got = intersections.find(m_hit);
-			Object s = got->second;
+			std::unordered_map<real, Object>::const_iterator got = intersections.find(m_hit);	// Stores object mapped to the hit location
+			Object s = got->second;																// according to hash map data structure.
 			Matrix transform(s.b_transform);
-			Point choke(Ray::position(r, m_hit));											// Ahora necesito los PUNTOS de INTERSECCION en 3D Phit = ray.orig + ray.dir * t
-
-			Vector eye(Vector::negate(r.m_direction));										// Defino el vector EYE como el negativo del rayo
-
-			Point object_point(rtc::Matrix::multiplyByTuple(Matrix::inverse(transform), choke));			// Calculo del vector Normal al hit point choke
+			Point choke(Ray::position(r, m_hit));												// Computes 3D coordinate of hit point as hitPoint = ray.orig + ray.dir * hit_location.
+			Vector eye(Vector::negate(r.m_direction));											// Define eye vector as negative of ray direction.
+			Point object_point(rtc::Matrix::multiplyByTuple(Matrix::inverse(transform), choke));			// Computes normal vector at hit point choke.
 			Vector object_normal(Point::subPoints(object_point, rtc::Point(0, 0, 0)));
 			Vector world_normal(Matrix::multiplyByTuple(rtc::Matrix::transpose(Matrix::inverse(transform)), object_normal));
 			world_normal.m_w = 0;
 			Vector normal(Vector::normalize(world_normal));
 
-			if (Vector::dotProduct(normal, eye) < 0) {
-				r.m_inside = true;
+			if (Vector::dotProduct(normal, eye) < 0) {			// If normal and eye vector dot product is negative
+				r.m_inside = true;								// then the "viewer" is inside the object.
 				normal = Vector::negate(normal);
 			}
 			else {
 				r.m_inside = false;
 			}
-
-			r.m_choke = choke;
-			r.m_eye = eye;
+			r.m_choke = choke;									// Set hit point, eye, and normal vectors
+			r.m_eye = eye;										// associated with the current ray.
 			r.m_normal = normal;
 
 		}
 		
+		// Returns color at the intersection point by
+		// invoking the lightning member function.
 		Color shade_hit( World& w, Point choke, Vector eye, Vector normal, real hit) {
 			Color color;
-			if (hit < 0 || hit == 9999) { 
+			if (hit < 0 || hit == HIGH_NUMBER) { 
 				color = Color(0, 0, 0);
 				return color; 
 			}
 			else {
 				std::unordered_map<real, Object>::const_iterator got = intersections.find(hit);
 				Object s = got->second;
-				m_choke = choke;
-				m_eye = eye;
-				m_normal = normal;
-				color = lighting(s.b_material, w.m_light_source, m_choke, m_eye, m_normal);
+				color = lighting(s.b_material, w.m_light_source, choke, eye, normal);
 				return color;
 			}
 	   }
 
+		// Intersects the world with a given ray and
+		// returns the color at the intersection point.
 		Color color_at(World& w, Ray& r) {
 			intersect_world(w, r);
 			prepare_computations(0, r, w);
@@ -238,6 +267,8 @@ namespace rtc {
 			return c;
 		}
 
+		// Computes 3D coordinates at the center of a given pixel
+		// and constructs a ray that passes through it.
 		static Ray ray_for_pixel(Camera& camera, const int& x, const int& y) {
 			real xoffset = (x + 0.5) * camera.pixel_size();			// Offset from edge of canvas to pixels center
 			real yoffset = (y + 0.5) * camera.pixel_size();
