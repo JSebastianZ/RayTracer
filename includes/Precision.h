@@ -10,6 +10,8 @@
 #ifndef RTC_PRECISION_H
 #define RTC_PRECISION_H
 #define PI 3.14159265
+#define INFINITE -999999
+#define HIGH_NUMBER 9999
 
 
 #include <algorithm>
