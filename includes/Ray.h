@@ -149,7 +149,6 @@ namespace rtc {
 				}
 				else continue;
 			}
-			return minimum;
 			if (minimum >= 0) return minimum;
 			else return -1;
 		}
@@ -172,14 +171,14 @@ namespace rtc {
 		// Diffuse: light reflected from a matte surface.
 		// Specular: reflection of light source on a curved surface.
 		// All are represented as a Color object with range between 0~1.
-		static Color lighting(Material& m, Light& light, Point& p_p, Vector& p_eye, Vector& p_normal) {
+		static Color lighting(Material& m, Light& light, Point& p_p, Vector& p_eye, Vector& p_normal, bool shadow) {
 			Color diffuse(0, 0, 0);																// Diffuse reflection component.
 			Color specular(0, 0, 0);															// Specular reflection component.
 			Color effective_color(Color::multColors(m.m_color, light.m_intensity)); 			// Combine object surface and light source colors.
 			Vector lightv(Vector::normalize(Point::subPoints(light.m_source, p_p))); 			// Vector represents direction of light source.
 			Color ambient_contribution(Color::scalarMultiplication(effective_color, m.m_ambient));			// Compute ambient contribution.
-			real cosine_light_normal(Vector::dotProduct(lightv, static_cast<Vector>(p_normal)));			// Cosine of angle between light vector and object surface normal. 
-			if (cosine_light_normal < 0) {														// If negative, the light is "in the other side" of the surface.
+			real cosine_light_normal(Vector::dotProduct(lightv, p_normal));			// Cosine of angle between light vector and object surface normal. 
+			if (cosine_light_normal < 0 || (shadow == true)) {														// If negative, the light is "in the other side" of the surface.
 				diffuse = Color(0, 0, 0);
 				specular = Color(0, 0, 0);
 			}
@@ -236,12 +235,32 @@ namespace rtc {
 			else {
 				r.m_inside = false;
 			}
-			r.m_choke = choke;									// Set hit point, eye, and normal vectors
 			r.m_eye = eye;										// associated with the current ray.
 			r.m_normal = normal;
+			Point over_point = Point::addPoints(choke,			// compensate for shadows computation.
+				Point::scalarMultiplication
+					(Point(normal.m_x,normal.m_y,normal.m_z),0.0008));
+			choke = over_point;
+			r.m_choke = choke;									// Set hit point, eye, and normal vectors
+
 
 		}
 		
+		bool shadowed(World& w, Point& p) {
+			Vector v = Point::subPoints(w.m_light_source.m_source, p);
+			real distance = Vector::magnitude(v);
+			Vector direction = Vector::normalize(v);
+			Ray r = Ray(p, direction);
+			intersect_world(w, r);
+			m_hit = r.hit_location(r.accummulate_ix);
+			if (m_hit < 0 || m_hit == HIGH_NUMBER) {
+				return false;
+			}
+			else {
+				if (m_hit < distance) return true; else return false;
+			}
+		}
+
 		// Returns color at the intersection point by
 		// invoking the lightning member function.
 		Color shade_hit( World& w, Point choke, Vector eye, Vector normal, real hit) {
@@ -253,7 +272,8 @@ namespace rtc {
 			else {
 				std::unordered_map<real, Object>::const_iterator got = intersections.find(hit);
 				Object s = got->second;
-				color = lighting(s.b_material, w.m_light_source, choke, eye, normal);
+				bool shadow = shadowed(w, choke);
+				color = lighting(s.b_material, w.m_light_source, choke, eye, normal, shadow); 
 				return color;
 			}
 	   }
