@@ -239,7 +239,7 @@ namespace rtc {
 			r.m_normal = normal;
 			Point over_point = Point::addPoints(choke,			// compensate for shadows computation.
 				Point::scalarMultiplication
-					(Point(normal.m_x,normal.m_y,normal.m_z),0.0008));
+					(Point(normal.m_x,normal.m_y,normal.m_z),0.005));
 			choke = over_point;
 			r.m_choke = choke;									// Set hit point, eye, and normal vectors
 
