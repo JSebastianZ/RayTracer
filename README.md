@@ -2,7 +2,7 @@
 # C++ レイトレーサー
 
 <p align="center">
-  <img width="100" height="100" src="https://user-images.githubusercontent.com/66903979/88450698-d191f100-ce8b-11ea-9afc-12e17ef423be.jpg">
+  <img width="512" height="512" src="https://user-images.githubusercontent.com/66903979/88450698-d191f100-ce8b-11ea-9afc-12e17ef423be.jpg">
 </p>
 
 このレイトレーサーは、ホイットレイレイトレーシングアルゴリズム*のC ++実装です。
