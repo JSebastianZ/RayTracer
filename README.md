@@ -21,7 +21,7 @@
 
 3- #1が反射面の場合、反射方向に光線を投じ、そこで反射される色を再帰的に決定します。
 
-4- #1が透明なサーフェスの場合、屈折の方向からプロセスを開始します。
+4- #1が透明なサーフェスの場合、屈折の方向からプロセスを開始します (進行中の作業)。
 
 5- #1に寄与するすべての色値（表面色、反射、屈折）を追加し、結果をピクセルの最終色として返します。
 
@@ -43,7 +43,7 @@ The color of each pixel of the final image is calculated as follows:
 
 3- If #1 is a reflective surface, cast a ray in the reflection direction, and determine the color that is reflected there, recursively.
 
-4- If #1 is a transparent surface, start the process in the direction of refraction.
+4- If #1 is a transparent surface, start the process in the direction of refraction (work in progress).
 
 5- Add all color values that contribute to #1 (surface color, reflection, refraction) and return the result as the final color of the pixel.
 
